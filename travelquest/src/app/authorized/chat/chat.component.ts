@@ -95,6 +95,8 @@ export class ChatComponent implements OnInit {
     collectionData(conversationsQuery, { idField: 'id' })
       .pipe(
         map((data) =>
+          // CHANGE: Added type assertion for DocumentData & Conversation.
+          // Reason: To ensure TypeScript knows the structure of the data being accessed.
           (data as (DocumentData & Conversation)[]).find(
             (conversation) =>
               conversation.participants.length === 2 &&
@@ -133,11 +135,13 @@ export class ChatComponent implements OnInit {
 
     this.messages$ = collectionData(messagesQuery, { idField: 'id' }).pipe(
       map((data) =>
+        // CHANGE: Added type assertion for DocumentData & Message.
+        // Reason: Ensures TypeScript recognizes fields like `text` and `timestamp`.
         (data as (DocumentData & Message)[]).map((doc) => ({
-          text: doc.text,
-          timestamp: doc.timestamp,
+          text: doc.text, // CHANGE: Accessing `text` directly after type assertion.
+          timestamp: doc.timestamp, // CHANGE: Accessing `timestamp` directly after type assertion.
           userId: doc.userId,
-          user: 'Loading...', // Placeholder
+          user: 'Loading...', // Placeholder until actual user name is fetched.
         }))
       ),
       switchMap((messages: Message[]) =>

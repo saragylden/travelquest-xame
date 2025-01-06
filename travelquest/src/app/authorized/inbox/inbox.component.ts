@@ -77,37 +77,43 @@ export class InboxComponent implements OnInit {
       orderBy('timestamp', 'desc') // Fetch conversations sorted by recent activity
     );
 
+    // Fix: Cast the result from `collectionData` to `Observable<Conversation[]>`
     this.conversations$ = (
       collectionData(conversationsQuery, {
         idField: 'id',
       }) as Observable<Conversation[]>
     ).pipe(
+      // Fix: Added `switchMap` to transform the `Conversation[]` to `Message[]`
       switchMap((conversations: Conversation[]) =>
         from(
           Promise.all(
             conversations.map(async (conversation) => {
+              // Find the other user in the conversation
               const otherUserId = conversation.participants.find(
                 (participant) => participant !== this.currentUser!.uid
               );
 
+              // Fetch the user's name from Firestore (or use 'Unknown User' as fallback)
               const userName = otherUserId
                 ? await this.getUserName(otherUserId)
                 : 'Unknown User';
 
+              // Return an object matching the Message type
               return {
                 conversationId: conversation.id,
                 userId: otherUserId || '',
                 user: userName,
-              } as Message; // Cast to Message to match the expected output type
+              } as Message; // Cast the return value to `Message` type
             })
           )
         )
       ),
+      // Fix: Properly handle errors and return an empty array of type `Message[]`
       catchError((error) => {
         console.error('Error fetching conversations:', error);
         this.error = 'Failed to load inbox. Please try again later.';
         this.loading = false;
-        return of([] as Message[]); // Ensure the fallback is properly typed
+        return of([] as Message[]); // Ensure fallback is typed as `Message[]`
       })
     );
 
