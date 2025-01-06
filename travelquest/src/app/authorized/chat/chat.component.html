@@ -1,4 +1,15 @@
 <div *ngIf="currentUserUID">
+  <div class="user-info-box">
+    <span class="user-name">{{ otherUserName }}</span>
+    <button
+      mat-icon-button
+      class="user-icon-button"
+      (click)="callMeetupVerification()"
+    >
+      <mat-icon>group_add</mat-icon>
+    </button>
+  </div>
+
   <div *ngIf="currentConversationId; else noConversation">
     <div *ngIf="loadingMessages" class="loading-state">
       <p>Loading messages...</p>
@@ -19,6 +30,14 @@
         </div>
         <div class="message-content">
           {{ message.text }}
+
+          <!-- Show "Accept" and "Decline" buttons for meetup verification message -->
+          <div *ngIf="message.text.includes('Did you meet')">
+            <button (click)="handleResponse(message, 'accept')">Accept</button>
+            <button (click)="handleResponse(message, 'decline')">
+              Decline
+            </button>
+          </div>
         </div>
         <div class="message-footer">
           <span class="timestamp">{{

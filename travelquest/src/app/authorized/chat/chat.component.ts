@@ -15,12 +15,14 @@ import { Observable, from } from 'rxjs';
 import { Timestamp } from '@angular/fire/firestore';
 import { map, switchMap } from 'rxjs/operators';
 import { sessionStoreRepository } from '../../shared/stores/session-store.repository';
-import { DocumentData } from 'firebase/firestore'; // Correct import for DocumentData
+import { DocumentData } from 'firebase/firestore';
+import { Router } from '@angular/router';
+import { MeetupVerificationService } from '../../shared/components/meetup-verification/meetup-verification.component';
 
 interface Message {
   text: string;
   timestamp: Timestamp;
-  user: string; // Will store the user name
+  user: string;
   userId: string;
 }
 
@@ -35,23 +37,38 @@ interface Conversation {
   styleUrls: ['./chat.component.scss'],
 })
 export class ChatComponent implements OnInit {
-  messages$!: Observable<Message[]> | undefined; // Observable for conversation messages
-  newMessage: string = ''; // Input for new messages
+  messages$!: Observable<Message[]> | undefined;
+  newMessage: string = '';
   currentUserUID: string | null | undefined;
-  currentConversationId: string | null = null; // Active conversation ID
-  otherUserId: string | null = null; // User ID of the other participant
-  loadingMessages: boolean = true; // Loading state for messages
+  currentConversationId: string | null = null;
+  otherUserId: string | null = null;
+  otherUserName: string | null = null;
+  loadingMessages: boolean = true;
 
   constructor(
     private firestore: Firestore,
     private route: ActivatedRoute,
-    private sessionStore: sessionStoreRepository
+    private sessionStore: sessionStoreRepository,
+    private meetupVerificationService: MeetupVerificationService
   ) {}
 
   ngOnInit(): void {
     this.loadAuthenticatedUser().then(() => {
       this.initializeComponent();
     });
+  }
+
+  // Update this method to call the service method directly
+  callMeetupVerification(): void {
+    if (this.currentUserUID && this.otherUserId && this.currentConversationId) {
+      this.meetupVerificationService.sendMeetupVerification(
+        this.currentUserUID,
+        this.otherUserId,
+        this.currentConversationId
+      );
+    } else {
+      console.error('Missing required information for meetup verification.');
+    }
   }
 
   private async loadAuthenticatedUser(): Promise<void> {
@@ -65,17 +82,53 @@ export class ChatComponent implements OnInit {
 
   private initializeComponent(): void {
     this.route.paramMap.subscribe((params) => {
-      const conversationId = params.get('id'); // For `conversation/:id`
-      const otherUserId = params.get('userId'); // For `chat/:userId`
+      const conversationId = params.get('id');
+      const otherUserId = params.get('userId');
 
       if (conversationId) {
         this.currentConversationId = conversationId;
+        this.determineOtherUserIdFromConversation(conversationId);
         this.fetchMessagesWithUserNames(conversationId);
       } else if (otherUserId) {
         this.otherUserId = otherUserId;
-        this.checkExistingConversation(this.otherUserId);
+        this.fetchOtherUserName(otherUserId); // Fetch the other user's name directly
+        this.checkExistingConversation(otherUserId);
       } else {
         console.error('Invalid route parameters. No conversation or user ID.');
+      }
+    });
+  }
+
+  private determineOtherUserIdFromConversation(conversationId: string): void {
+    const conversationDocRef = doc(
+      this.firestore,
+      `conversations/${conversationId}`
+    );
+
+    getDoc(conversationDocRef).then((snapshot) => {
+      if (snapshot.exists()) {
+        const participants = snapshot.data()?.['participants'] || [];
+        this.otherUserId = participants.find(
+          (id: string) => id !== this.currentUserUID
+        );
+        if (this.otherUserId) {
+          this.fetchOtherUserName(this.otherUserId);
+        }
+      } else {
+        console.error('Conversation not found.');
+      }
+    });
+  }
+
+  private fetchOtherUserName(userId: string): void {
+    const userDocRef = doc(this.firestore, `publicProfiles/${userId}`);
+
+    getDoc(userDocRef).then((snapshot) => {
+      if (snapshot.exists()) {
+        this.otherUserName = snapshot.data()?.['name'] || 'Unknown User';
+      } else {
+        this.otherUserName = 'Unknown User';
+        console.error('Other user profile not found.');
       }
     });
   }
@@ -95,8 +148,6 @@ export class ChatComponent implements OnInit {
     collectionData(conversationsQuery, { idField: 'id' })
       .pipe(
         map((data) =>
-          // CHANGE: Added type assertion for DocumentData & Conversation.
-          // Reason: To ensure TypeScript knows the structure of the data being accessed.
           (data as (DocumentData & Conversation)[]).find(
             (conversation) =>
               conversation.participants.length === 2 &&
@@ -135,11 +186,9 @@ export class ChatComponent implements OnInit {
 
     this.messages$ = collectionData(messagesQuery, { idField: 'id' }).pipe(
       map((data) =>
-        // CHANGE: Added type assertion for DocumentData & Message.
-        // Reason: Ensures TypeScript recognizes fields like `text` and `timestamp`.
         (data as (DocumentData & Message)[]).map((doc) => ({
-          text: doc.text, // CHANGE: Accessing `text` directly after type assertion.
-          timestamp: doc.timestamp, // CHANGE: Accessing `timestamp` directly after type assertion.
+          text: doc.text,
+          timestamp: doc.timestamp,
           userId: doc.userId,
           user: 'Loading...', // Placeholder until actual user name is fetched.
         }))
@@ -193,6 +242,13 @@ export class ChatComponent implements OnInit {
     } else {
       this.sendMessageToFirestore(this.currentConversationId);
     }
+  }
+
+  handleResponse(message: Message, response: string): void {
+    // Process the response from the "Accept" or "Decline" button
+    console.log(
+      `Meetup verification response for message "${message.text}": ${response}`
+    );
   }
 
   private createNewConversation(): void {
