@@ -15,6 +15,7 @@ import { Observable, from } from 'rxjs';
 import { Timestamp } from '@angular/fire/firestore';
 import { map, switchMap } from 'rxjs/operators';
 import { sessionStoreRepository } from '../../shared/stores/session-store.repository';
+import { DocumentData } from 'firebase/firestore'; // Correct import for DocumentData
 
 interface Message {
   text: string;
@@ -34,7 +35,7 @@ interface Conversation {
   styleUrls: ['./chat.component.scss'],
 })
 export class ChatComponent implements OnInit {
-  messages$!: Observable<Message[]>; // Observable for conversation messages
+  messages$!: Observable<Message[]> | undefined; // Observable for conversation messages
   newMessage: string = ''; // Input for new messages
   currentUserUID: string | null | undefined;
   currentConversationId: string | null = null; // Active conversation ID
@@ -79,7 +80,6 @@ export class ChatComponent implements OnInit {
     });
   }
 
-  // Check if a conversation exists with the other user
   private checkExistingConversation(otherParticipantUid: string): void {
     if (!this.currentUserUID) {
       console.error('Current user not found.');
@@ -94,8 +94,8 @@ export class ChatComponent implements OnInit {
 
     collectionData(conversationsQuery, { idField: 'id' })
       .pipe(
-        map((conversations: Conversation[]) =>
-          conversations.find(
+        map((data) =>
+          (data as (DocumentData & Conversation)[]).find(
             (conversation) =>
               conversation.participants.length === 2 &&
               conversation.participants.includes(otherParticipantUid) &&
@@ -119,7 +119,6 @@ export class ChatComponent implements OnInit {
       );
   }
 
-  // Fetch messages and map userId to user name
   private fetchMessagesWithUserNames(conversationId: string): void {
     this.loadingMessages = true;
 
@@ -133,6 +132,14 @@ export class ChatComponent implements OnInit {
     );
 
     this.messages$ = collectionData(messagesQuery, { idField: 'id' }).pipe(
+      map((data) =>
+        (data as (DocumentData & Message)[]).map((doc) => ({
+          text: doc.text,
+          timestamp: doc.timestamp,
+          userId: doc.userId,
+          user: 'Loading...', // Placeholder
+        }))
+      ),
       switchMap((messages: Message[]) =>
         from(
           Promise.all(
@@ -166,7 +173,6 @@ export class ChatComponent implements OnInit {
     );
   }
 
-  // Send a new message
   sendMessage(): void {
     if (!this.newMessage.trim()) {
       console.error('Message is empty.');

@@ -77,19 +77,19 @@ export class InboxComponent implements OnInit {
       orderBy('timestamp', 'desc') // Fetch conversations sorted by recent activity
     );
 
-    this.conversations$ = collectionData(conversationsQuery, {
-      idField: 'id',
-    }).pipe(
+    this.conversations$ = (
+      collectionData(conversationsQuery, {
+        idField: 'id',
+      }) as Observable<Conversation[]>
+    ).pipe(
       switchMap((conversations: Conversation[]) =>
         from(
           Promise.all(
             conversations.map(async (conversation) => {
-              // Fetch the other user's ID
               const otherUserId = conversation.participants.find(
                 (participant) => participant !== this.currentUser!.uid
               );
 
-              // Fetch the user's name from Firestore
               const userName = otherUserId
                 ? await this.getUserName(otherUserId)
                 : 'Unknown User';
@@ -98,7 +98,7 @@ export class InboxComponent implements OnInit {
                 conversationId: conversation.id,
                 userId: otherUserId || '',
                 user: userName,
-              };
+              } as Message; // Cast to Message to match the expected output type
             })
           )
         )
@@ -107,7 +107,7 @@ export class InboxComponent implements OnInit {
         console.error('Error fetching conversations:', error);
         this.error = 'Failed to load inbox. Please try again later.';
         this.loading = false;
-        return of([]);
+        return of([] as Message[]); // Ensure the fallback is properly typed
       })
     );
 
