@@ -9,13 +9,17 @@ import {
   query,
   where,
 } from '@angular/fire/firestore';
-import { BehaviorSubject } from 'rxjs';
+import { MatSnackBar } from '@angular/material/snack-bar';
+import { SnackbarService } from '../../../shared/snackbar/snackbar.service';
 
 @Injectable({
   providedIn: 'root',
 })
 export class MeetupVerificationService {
-  constructor(private firestore: Firestore) {}
+  constructor(
+    private firestore: Firestore,
+    private snackbarService: SnackbarService
+  ) {}
 
   // Method to send verification request
   sendMeetupVerification(currentUserUID: string, otherUserUID: string): void {
@@ -41,9 +45,13 @@ export class MeetupVerificationService {
     addDoc(verificationRequestsCollection, verificationRequest)
       .then(() => {
         console.log('Meetup verification request sent successfully');
+        this.snackbarService.success(
+          'Meetup verification request sent successfully'
+        );
       })
       .catch((error) => {
         console.error('Error sending verification request: ', error);
+        this.snackbarService.error('Error sending request', 'Retry', 5000);
       });
   }
 

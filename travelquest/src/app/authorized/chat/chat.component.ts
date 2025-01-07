@@ -66,7 +66,7 @@ export class ChatComponent implements OnInit {
     if (this.currentUserUID) {
       this.meetupVerificationService
         .getVerificationRequests(this.currentUserUID)
-        .subscribe((requests: any) => {
+        .subscribe((requests) => {
           this.verificationRequests = requests;
         });
     }
@@ -74,6 +74,14 @@ export class ChatComponent implements OnInit {
 
   // Handle response (accept/decline) for meetup verification request
   handleResponse(request: any, response: string): void {
+    if (request.isProcessing) {
+      console.log('Request is already being processed.');
+      return; // Prevent processing if already in progress
+    }
+
+    // Set processing flag to prevent further clicks
+    request.isProcessing = true;
+
     console.log(`Meetup verification response for request: ${response}`);
     // Update Firestore document with the response
     const verificationRequestRef = doc(
@@ -86,9 +94,12 @@ export class ChatComponent implements OnInit {
     updateDoc(verificationRequestRef, { status: response })
       .then(() => {
         console.log(`Verification request ${response} successfully.`);
+        // Optionally, reset processing flag after a brief delay if necessary
       })
       .catch((error) => {
         console.error('Error updating verification request: ', error);
+        // Reset processing flag in case of error
+        request.isProcessing = false;
       });
   }
 
