@@ -16,8 +16,9 @@ import { Timestamp } from '@angular/fire/firestore';
 import { map, switchMap } from 'rxjs/operators';
 import { sessionStoreRepository } from '../../shared/stores/session-store.repository';
 import { DocumentData } from 'firebase/firestore';
-import { Router } from '@angular/router';
-import { MeetupVerificationService } from '../../shared/components/meetup-verification/meetup-verification.component';
+import { MatDialog } from '@angular/material/dialog';
+import { MatSnackBar } from '@angular/material/snack-bar'; // Import MatSnackBar
+import { MeetupDialogComponent } from '../../shared/components/meetup-dialog/meetup-dialog.component';
 
 interface Message {
   text: string;
@@ -49,7 +50,8 @@ export class ChatComponent implements OnInit {
     private firestore: Firestore,
     private route: ActivatedRoute,
     private sessionStore: sessionStoreRepository,
-    private meetupVerificationService: MeetupVerificationService
+    private dialog: MatDialog,
+    private snackBar: MatSnackBar // Add MatSnackBar service
   ) {}
 
   ngOnInit(): void {
@@ -58,17 +60,53 @@ export class ChatComponent implements OnInit {
     });
   }
 
-  // Update this method to call the service method directly
-  callMeetupVerification(): void {
-    if (this.currentUserUID && this.otherUserId && this.currentConversationId) {
-      this.meetupVerificationService.sendMeetupVerification(
-        this.currentUserUID,
-        this.otherUserId,
-        this.currentConversationId
-      );
-    } else {
-      console.error('Missing required information for meetup verification.');
+  openMeetupDialog(): void {
+    if (
+      !this.currentUserUID ||
+      !this.otherUserId ||
+      !this.currentConversationId
+    ) {
+      console.error('Missing information for meetup request.');
+      return;
     }
+
+    // Save the meetup request to Firestore
+    const meetupRequestRef = collection(
+      this.firestore,
+      `conversations/${this.currentConversationId}/meetupRequests`
+    );
+
+    addDoc(meetupRequestRef, {
+      sender: this.currentUserUID,
+      receiver: this.otherUserId,
+      timestamp: Timestamp.fromDate(new Date()),
+      status: 'pending', // Mark as pending for further processing
+    })
+      .then((docRef) => {
+        // Show snackbar to confirm the request
+        this.snackBar.open('The request has been sent.', 'Close', {
+          duration: 3000,
+        });
+
+        // Open the dialog and pass the requestId and receiver flag
+        const dialogRef = this.dialog.open(MeetupDialogComponent, {
+          data: {
+            name: this.otherUserName || 'Unknown User',
+            requestId: docRef.id,
+            isReceiver: false, // This is the sender
+          },
+        });
+
+        dialogRef.afterClosed().subscribe((result) => {
+          console.log('Dialog result:', result);
+          if (result) {
+            console.log(`User selected: ${result}`);
+          }
+        });
+      })
+      .catch((error) => {
+        console.error('Error sending meetup request:', error);
+      });
   }
 
   private async loadAuthenticatedUser(): Promise<void> {
@@ -242,13 +280,6 @@ export class ChatComponent implements OnInit {
     } else {
       this.sendMessageToFirestore(this.currentConversationId);
     }
-  }
-
-  handleResponse(message: Message, response: string): void {
-    // Process the response from the "Accept" or "Decline" button
-    console.log(
-      `Meetup verification response for message "${message.text}": ${response}`
-    );
   }
 
   private createNewConversation(): void {

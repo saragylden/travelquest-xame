@@ -16,7 +16,7 @@ export class MeetupVerificationService {
     const message = {
       text: `Did you meet ${otherUserUID}?`,
       timestamp: Timestamp.fromDate(new Date()),
-      user: currentUserUID, // This should be the current user
+      user: currentUserUID,
       userId: currentUserUID,
     };
 

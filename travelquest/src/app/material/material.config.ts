@@ -13,6 +13,7 @@ import { MatChipsModule } from '@angular/material/chips';
 import { MatDialogModule } from '@angular/material/dialog';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatListModule } from '@angular/material/list';
+import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 
 const materialComponents = [
   MatCardModule,
@@ -28,6 +29,7 @@ const materialComponents = [
   MatDialogModule,
   MatProgressSpinnerModule,
   MatListModule,
+  BrowserAnimationsModule,
 ];
 
 @NgModule({
