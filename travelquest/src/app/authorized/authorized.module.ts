@@ -19,6 +19,7 @@ import { NotFoundComponent } from './404page/notfound.component';
 import { UserProfileComponent } from './user-profile/user-profile.component';
 import { ChatComponent } from './chat/chat.component';
 import { InboxComponent } from './inbox/inbox.component';
+import { MeetupVerificationModalComponent } from './meetup-verification-modal/meetup-verification-modal.component';
 
 @NgModule({
   declarations: [
@@ -35,6 +36,7 @@ import { InboxComponent } from './inbox/inbox.component';
     UserProfileComponent,
     ChatComponent,
     InboxComponent,
+    MeetupVerificationModalComponent,
   ],
   imports: [
     CommonModule,
