@@ -9,6 +9,7 @@ import {
   collectionData,
   doc,
   getDoc,
+  updateDoc,
 } from '@angular/fire/firestore';
 import { ActivatedRoute } from '@angular/router';
 import { Observable, from } from 'rxjs';
@@ -54,27 +55,101 @@ export class ChatComponent implements OnInit {
   ngOnInit(): void {
     this.loadAuthenticatedUser().then(() => {
       this.initializeComponent();
+      this.listenForVerificationRequests();
     });
   }
 
   //open modal
-  openMeetupVerificationModal(): void {
+  openMeetupVerificationModal(request: any): void {
     const dialogRef = this.dialog.open(MeetupVerificationModalComponent, {
       width: '400px',
-      data: { sender: 'Other User Name' }, // Replace with dynamic data
+      data: { sender: request.senderId },
     });
 
     dialogRef.afterClosed().subscribe((result: boolean | undefined) => {
+      const verificationDocRef = doc(
+        this.firestore,
+        `conversations/${this.currentConversationId}/verifications/${request.id}`
+      );
+
       if (result === true) {
-        console.log('User confirmed the meetup.');
-        // Handle positive confirmation (e.g., update database)
+        updateDoc(verificationDocRef, { status: 'accepted' })
+          .then(() => console.log('Meetup verification accepted.'))
+          .catch((error) =>
+            console.error('Error updating verification request:', error)
+          );
       } else if (result === false) {
-        console.log('User denied the meetup.');
-        // Handle negative confirmation
-      } else {
-        console.log('Dialog was closed without action.');
+        updateDoc(verificationDocRef, { status: 'declined' })
+          .then(() => console.log('Meetup verification declined.'))
+          .catch((error) =>
+            console.error('Error updating verification request:', error)
+          );
       }
     });
+  }
+
+  //send meetup verification request
+  sendMeetupVerificationRequest(): void {
+    if (
+      !this.currentConversationId ||
+      !this.otherUserId ||
+      !this.currentUserUID
+    ) {
+      console.error(
+        'Missing conversation, other user, or current user details.'
+      );
+      return;
+    }
+
+    const verificationCollection = collection(
+      this.firestore,
+      `conversations/${this.currentConversationId}/verifications`
+    );
+
+    const verificationRequest = {
+      senderId: this.currentUserUID,
+      recipientId: this.otherUserId,
+      status: 'pending',
+      timestamp: Timestamp.fromDate(new Date()),
+    };
+
+    addDoc(verificationCollection, verificationRequest)
+      .then(() => {
+        console.log('Meetup verification request sent.');
+      })
+      .catch((error) => {
+        console.error('Error sending meetup verification request:', error);
+      });
+  }
+
+  listenForVerificationRequests(): void {
+    if (!this.currentConversationId || !this.currentUserUID) {
+      console.error('Missing conversation or user details.');
+      return;
+    }
+
+    const verificationCollection = collection(
+      this.firestore,
+      `conversations/${this.currentConversationId}/verifications`
+    );
+
+    const verificationQuery = query(
+      verificationCollection,
+      where('recipientId', '==', this.currentUserUID),
+      where('status', '==', 'pending')
+    );
+
+    collectionData(verificationQuery, { idField: 'id' }).subscribe(
+      (requests: any[]) => {
+        if (requests.length > 0) {
+          const latestRequest = requests[0]; // Assuming the first one is the latest
+          this.openMeetupVerificationModal(latestRequest);
+        }
+      },
+      (error) => {
+        console.error('Error listening for verification requests:', error);
+      }
+    );
   }
 
   private async loadAuthenticatedUser(): Promise<void> {

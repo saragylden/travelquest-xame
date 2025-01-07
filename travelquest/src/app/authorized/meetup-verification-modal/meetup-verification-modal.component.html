@@ -1,9 +1,8 @@
-<p>meetup-verification-modal works!</p>
 <h2 mat-dialog-title>Meetup Verification</h2>
 <mat-dialog-content>
   <p>Have you met up with {{ data.sender }}?</p>
 </mat-dialog-content>
 <mat-dialog-actions>
-  <button mat-button (click)="closeDialog(true)">Yes</button>
-  <button mat-button (click)="closeDialog(false)">No</button>
+  <button mat-button (click)="closeDialog(true)">Yes, I have</button>
+  <button mat-button (click)="closeDialog(false)">No, I haven't</button>
 </mat-dialog-actions>
