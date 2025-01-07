@@ -1,10 +1,15 @@
+// meetup-verification.service.ts
 import { Injectable } from '@angular/core';
 import {
   Firestore,
   collection,
   addDoc,
   Timestamp,
+  collectionData,
+  query,
+  where,
 } from '@angular/fire/firestore';
+import { BehaviorSubject } from 'rxjs';
 
 @Injectable({
   providedIn: 'root',
@@ -12,27 +17,27 @@ import {
 export class MeetupVerificationService {
   constructor(private firestore: Firestore) {}
 
+  // Method to send verification request
   sendMeetupVerification(currentUserUID: string, otherUserUID: string): void {
-    // Create a new verification request
     const verificationRequest = {
       requestType: 'meetup-verification',
       text: `Did you meet ${currentUserUID}?`, // Customize the message
       timestamp: Timestamp.fromDate(new Date()),
-      senderUID: currentUserUID, // Current user (sender)
-      receiverUID: otherUserUID, // Other user (receiver)
-      status: 'pending', // Pending verification (waiting for user response)
+      senderUID: currentUserUID,
+      receiverUID: otherUserUID,
+      status: 'pending', // Pending verification
     };
 
+    // Store the verification request in Firestore
     this.sendVerificationRequest(verificationRequest);
   }
 
   private sendVerificationRequest(verificationRequest: any): void {
     const verificationRequestsCollection = collection(
       this.firestore,
-      'meetup-verification-requests' // New collection to store these requests
+      'meetup-verification-requests'
     );
 
-    // Add the verification request to the collection
     addDoc(verificationRequestsCollection, verificationRequest)
       .then(() => {
         console.log('Meetup verification request sent successfully');
@@ -40,5 +45,23 @@ export class MeetupVerificationService {
       .catch((error) => {
         console.error('Error sending verification request: ', error);
       });
+  }
+
+  // Listen for verification requests for the other user
+  getVerificationRequests(receiverUID: string) {
+    const verificationRequestsCollection = collection(
+      this.firestore,
+      'meetup-verification-requests'
+    );
+
+    // Query to get only requests for the specified receiver
+    return collectionData(
+      query(
+        verificationRequestsCollection,
+        where('receiverUID', '==', receiverUID),
+        where('status', '==', 'pending')
+      ),
+      { idField: 'id' }
+    );
   }
 }

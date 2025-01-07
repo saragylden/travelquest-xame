@@ -2,21 +2,19 @@ import { Component, OnInit } from '@angular/core';
 import {
   Firestore,
   collection,
-  addDoc,
-  query,
-  where,
-  orderBy,
-  collectionData,
   doc,
   getDoc,
+  collectionData,
+  query,
+  where,
+  updateDoc,
+  orderBy,
+  Timestamp,
 } from '@angular/fire/firestore';
-import { ActivatedRoute } from '@angular/router';
-import { Observable, from } from 'rxjs';
-import { Timestamp } from '@angular/fire/firestore';
-import { map, switchMap } from 'rxjs/operators';
+import { from, map, Observable, switchMap } from 'rxjs';
 import { sessionStoreRepository } from '../../shared/stores/session-store.repository';
-import { DocumentData } from 'firebase/firestore';
-import { Router } from '@angular/router';
+import { addDoc, DocumentData } from 'firebase/firestore';
+import { ActivatedRoute, Router } from '@angular/router';
 import { MeetupVerificationService } from '../meetup/meetup-verification/meetup-verification.component';
 
 interface Message {
@@ -46,6 +44,9 @@ export class ChatComponent implements OnInit {
   loadingMessages: boolean = true;
   selectedMessage: any = null;
 
+  // New property to hold verification requests
+  verificationRequests: any[] = [];
+
   constructor(
     private firestore: Firestore,
     private route: ActivatedRoute,
@@ -56,9 +57,61 @@ export class ChatComponent implements OnInit {
   ngOnInit(): void {
     this.loadAuthenticatedUser().then(() => {
       this.initializeComponent();
+      this.listenForVerificationRequests();
     });
   }
 
+  // Listen for incoming verification requests for the current user
+  listenForVerificationRequests(): void {
+    if (this.currentUserUID) {
+      this.meetupVerificationService
+        .getVerificationRequests(this.currentUserUID)
+        .subscribe((requests: any) => {
+          this.verificationRequests = requests;
+        });
+    }
+  }
+
+  // Handle response (accept/decline) for meetup verification request
+  handleResponse(request: any, response: string): void {
+    console.log(`Meetup verification response for request: ${response}`);
+    // Update Firestore document with the response
+    const verificationRequestRef = doc(
+      this.firestore,
+      'meetup-verification-requests',
+      request.id
+    );
+
+    // Update the status of the request
+    updateDoc(verificationRequestRef, { status: response })
+      .then(() => {
+        console.log(`Verification request ${response} successfully.`);
+      })
+      .catch((error) => {
+        console.error('Error updating verification request: ', error);
+      });
+  }
+
+  // Send message function
+  sendMessage(): void {
+    if (!this.newMessage.trim()) {
+      console.error('Message is empty.');
+      return;
+    }
+
+    if (!this.currentUserUID) {
+      console.error('User is not authenticated.');
+      return;
+    }
+
+    if (!this.currentConversationId) {
+      this.createNewConversation();
+    } else {
+      this.sendMessageToFirestore(this.currentConversationId);
+    }
+  }
+
+  // Function to send the meetup verification request
   callMeetupVerification(): void {
     if (this.currentUserUID && this.otherUserId && this.currentConversationId) {
       this.meetupVerificationService.sendMeetupVerification(
@@ -68,6 +121,12 @@ export class ChatComponent implements OnInit {
     } else {
       console.error('Missing required information for meetup verification.');
     }
+  }
+
+  // Function to open meetup verification modal
+  openMeetupVerification(message: any) {
+    this.selectedMessage = message;
+    // Open modal to accept/decline (trigger modal in your UI)
   }
 
   private async loadAuthenticatedUser(): Promise<void> {
@@ -80,7 +139,7 @@ export class ChatComponent implements OnInit {
   }
 
   private initializeComponent(): void {
-    this.route.paramMap.subscribe((params) => {
+    this.route.paramMap.subscribe((params: any) => {
       const conversationId = params.get('id');
       const otherUserId = params.get('userId');
 
@@ -223,35 +282,6 @@ export class ChatComponent implements OnInit {
         this.loadingMessages = false;
       }
     );
-  }
-
-  sendMessage(): void {
-    if (!this.newMessage.trim()) {
-      console.error('Message is empty.');
-      return;
-    }
-
-    if (!this.currentUserUID) {
-      console.error('User is not authenticated.');
-      return;
-    }
-
-    if (!this.currentConversationId) {
-      this.createNewConversation();
-    } else {
-      this.sendMessageToFirestore(this.currentConversationId);
-    }
-  }
-
-  handleResponse(message: any, response: string): void {
-    console.log(
-      `Meetup verification response for message "${message.text}": ${response}`
-    );
-  }
-
-  openMeetupVerification(message: any) {
-    this.selectedMessage = message; // Store the selected message
-    // Open the modal (you'll need to trigger it depending on your modal service, e.g., MatDialog)
   }
 
   private createNewConversation(): void {

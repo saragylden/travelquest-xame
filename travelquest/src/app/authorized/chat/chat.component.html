@@ -46,6 +46,23 @@
       </div>
     </div>
 
+    <!-- Display Pending Meetup Verification Requests -->
+    <div *ngIf="verificationRequests.length > 0" class="verification-requests">
+      <h3>Pending Meetup Verifications</h3>
+      <div
+        *ngFor="let request of verificationRequests"
+        class="verification-request"
+      >
+        <div class="verification-message">
+          <strong>{{ request.userName }}:</strong> {{ request.messageText }}
+        </div>
+        <div class="verification-actions">
+          <button (click)="handleResponse(request, 'accept')">Accept</button>
+          <button (click)="handleResponse(request, 'decline')">Decline</button>
+        </div>
+      </div>
+    </div>
+
     <!-- Message Input -->
     <div class="message-input">
       <textarea
@@ -84,18 +101,19 @@
   <p>You must log in to view or send messages.</p>
 </div>
 
-<!-- Modal for Meetup Verification -->
-<ng-template #meetupVerificationModal>
-  <h2 mat-dialog-title>Meetup Verification</h2>
-  <div mat-dialog-content>
-    <p>Do you want to meet up with {{ otherUserName }}?</p>
+<!-- Display Pending Meetup Verification Requests -->
+<div *ngIf="verificationRequests.length > 0" class="verification-requests">
+  <h3>Pending Meetup Verifications</h3>
+  <div
+    *ngFor="let request of verificationRequests"
+    class="verification-request"
+  >
+    <div class="verification-message">
+      <strong>{{ request.senderUID }}:</strong> {{ request.text }}
+    </div>
+    <div class="verification-actions">
+      <button (click)="handleResponse(request, 'accept')">Accept</button>
+      <button (click)="handleResponse(request, 'decline')">Decline</button>
+    </div>
   </div>
-  <div mat-dialog-actions>
-    <button mat-button (click)="handleResponse(selectedMessage, 'accept')">
-      Accept
-    </button>
-    <button mat-button (click)="handleResponse(selectedMessage, 'decline')">
-      Decline
-    </button>
-  </div>
-</ng-template>
+</div>
