@@ -24,7 +24,7 @@ import {
   getDownloadURL,
 } from '@angular/fire/storage';
 import { Observable, from, map, of, switchMap } from 'rxjs';
-import { runTransaction } from 'firebase/firestore';
+import { addDoc, query, runTransaction, where } from 'firebase/firestore';
 import { UserEditProfile } from '../models/user-profile.model';
 
 export interface SessionStoreProps {
@@ -387,6 +387,58 @@ export class sessionStoreRepository {
     } catch (error) {
       console.error('Error updating travels count:', error);
     }
+  }
+
+  // Keep count on requests sent
+  async sendMeetupRequest(
+    senderUID: string,
+    receiverUID: string
+  ): Promise<void> {
+    const meetupRequestsCollection = collection(
+      this.firestore,
+      'meetup-verification-requests'
+    );
+
+    // Check if there's an existing pending request from the sender to the receiver
+    const pendingRequestsQuery = query(
+      meetupRequestsCollection,
+      where('senderUID', '==', senderUID),
+      where('receiverUID', '==', receiverUID),
+      where('status', '==', 'pending')
+    );
+
+    const pendingRequests = await getDocs(pendingRequestsQuery);
+
+    if (pendingRequests.docs.length > 0) {
+      throw new Error('You already have a pending request with this user.');
+    }
+
+    // Check how many requests the sender has already sent to this receiver
+    const sentRequestsQuery = query(
+      meetupRequestsCollection,
+      where('senderUID', '==', senderUID),
+      where('receiverUID', '==', receiverUID)
+    );
+
+    const sentRequests = await getDocs(sentRequestsQuery);
+    const requestCount = sentRequests.docs.length;
+
+    if (requestCount >= 3) {
+      throw new Error('Request limit reached for this user.');
+    }
+
+    // If limit not reached, send the new request
+    const newRequest = {
+      requestType: 'meetup-verification',
+      text: `Did you meet ${senderUID}?`,
+      timestamp: Timestamp.fromDate(new Date()),
+      senderUID: senderUID,
+      receiverUID: receiverUID,
+      status: 'pending', // Request is still pending
+    };
+
+    await addDoc(meetupRequestsCollection, newRequest);
+    console.log('Meetup verification request sent successfully');
   }
 
   private createStore(): typeof store {
