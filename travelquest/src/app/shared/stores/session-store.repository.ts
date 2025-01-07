@@ -390,6 +390,7 @@ export class sessionStoreRepository {
   }
 
   // Keep count on requests sent
+  // Keep count on requests sent
   async sendMeetupRequest(
     senderUID: string,
     receiverUID: string
@@ -423,11 +424,12 @@ export class sessionStoreRepository {
     const sentRequests = await getDocs(sentRequestsQuery);
     const requestCount = sentRequests.docs.length;
 
-    if (requestCount >= 3) {
+    const requestLimit = 5; // Adjust this limit as needed
+    if (requestCount >= requestLimit) {
       throw new Error('Request limit reached for this user.');
     }
 
-    // If limit not reached, send the new request
+    // If the limit is not reached, send the new request
     const newRequest = {
       requestType: 'meetup-verification',
       text: `Did you meet ${senderUID}?`,
@@ -437,7 +439,27 @@ export class sessionStoreRepository {
       status: 'pending', // Request is still pending
     };
 
+    // Add the request to the Firestore collection
     await addDoc(meetupRequestsCollection, newRequest);
+
+    // Now update the meetup count for the sender in their profile
+    const publicProfileRef = doc(this.firestore, `publicProfiles/${senderUID}`);
+
+    await runTransaction(this.firestore, async (transaction) => {
+      const publicProfileDoc = await transaction.get(publicProfileRef);
+      if (publicProfileDoc.exists()) {
+        let meetupCount = publicProfileDoc.data()?.['meetupCount'] || 0;
+        meetupCount++; // Increment the count by 1
+
+        // Update the profile with the new count
+        transaction.update(publicProfileRef, {
+          meetupCount: meetupCount,
+        });
+      } else {
+        throw new Error('Public profile not found');
+      }
+    });
+
     console.log('Meetup verification request sent successfully');
   }
 

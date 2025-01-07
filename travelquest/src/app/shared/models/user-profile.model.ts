@@ -18,6 +18,7 @@ export interface UserProfile {
   travels: number;
   meetups: number;
   profilePicture: string;
+  meetupCount: number;
 }
 
 export interface UserEditProfile {

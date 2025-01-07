@@ -57,7 +57,6 @@ export class ProfileEditComponent implements OnInit {
         languages: [userProfile?.languages || [], Validators.required],
         country: [userProfile?.country || ''],
         hashtags: [predefinedTags],
-        meetups: [userProfile?.meetups || ''],
         customHashtags: [this.customHashtags],
       });
     });
