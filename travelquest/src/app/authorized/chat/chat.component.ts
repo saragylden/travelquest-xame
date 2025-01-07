@@ -17,7 +17,7 @@ import { map, switchMap } from 'rxjs/operators';
 import { sessionStoreRepository } from '../../shared/stores/session-store.repository';
 import { DocumentData } from 'firebase/firestore';
 import { Router } from '@angular/router';
-import { MeetupVerificationService } from '../../shared/components/meetup-verification/meetup-verification.component';
+import { MeetupVerificationService } from '../meetup/meetup-verification/meetup-verification.component';
 
 interface Message {
   text: string;
@@ -44,6 +44,7 @@ export class ChatComponent implements OnInit {
   otherUserId: string | null = null;
   otherUserName: string | null = null;
   loadingMessages: boolean = true;
+  selectedMessage: any = null;
 
   constructor(
     private firestore: Firestore,
@@ -58,13 +59,11 @@ export class ChatComponent implements OnInit {
     });
   }
 
-  // Update this method to call the service method directly
   callMeetupVerification(): void {
     if (this.currentUserUID && this.otherUserId && this.currentConversationId) {
       this.meetupVerificationService.sendMeetupVerification(
         this.currentUserUID,
-        this.otherUserId,
-        this.currentConversationId
+        this.otherUserId
       );
     } else {
       console.error('Missing required information for meetup verification.');
@@ -91,7 +90,7 @@ export class ChatComponent implements OnInit {
         this.fetchMessagesWithUserNames(conversationId);
       } else if (otherUserId) {
         this.otherUserId = otherUserId;
-        this.fetchOtherUserName(otherUserId); // Fetch the other user's name directly
+        this.fetchOtherUserName(otherUserId);
         this.checkExistingConversation(otherUserId);
       } else {
         console.error('Invalid route parameters. No conversation or user ID.');
@@ -244,11 +243,15 @@ export class ChatComponent implements OnInit {
     }
   }
 
-  handleResponse(message: Message, response: string): void {
-    // Process the response from the "Accept" or "Decline" button
+  handleResponse(message: any, response: string): void {
     console.log(
       `Meetup verification response for message "${message.text}": ${response}`
     );
+  }
+
+  openMeetupVerification(message: any) {
+    this.selectedMessage = message; // Store the selected message
+    // Open the modal (you'll need to trigger it depending on your modal service, e.g., MatDialog)
   }
 
   private createNewConversation(): void {

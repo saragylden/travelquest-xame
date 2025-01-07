@@ -5,6 +5,7 @@
       mat-icon-button
       class="user-icon-button"
       (click)="callMeetupVerification()"
+      *ngIf="currentConversationId && otherUserId && otherUserName"
     >
       <mat-icon>group_add</mat-icon>
     </button>
@@ -33,10 +34,8 @@
 
           <!-- Show "Accept" and "Decline" buttons for meetup verification message -->
           <div *ngIf="message.text.includes('Did you meet')">
-            <button (click)="handleResponse(message, 'accept')">Accept</button>
-            <button (click)="handleResponse(message, 'decline')">
-              Decline
-            </button>
+            <button (click)="openMeetupVerification(message)">Accept</button>
+            <button (click)="openMeetupVerification(message)">Decline</button>
           </div>
         </div>
         <div class="message-footer">
@@ -84,3 +83,19 @@
 <div *ngIf="!currentUserUID" class="error">
   <p>You must log in to view or send messages.</p>
 </div>
+
+<!-- Modal for Meetup Verification -->
+<ng-template #meetupVerificationModal>
+  <h2 mat-dialog-title>Meetup Verification</h2>
+  <div mat-dialog-content>
+    <p>Do you want to meet up with {{ otherUserName }}?</p>
+  </div>
+  <div mat-dialog-actions>
+    <button mat-button (click)="handleResponse(selectedMessage, 'accept')">
+      Accept
+    </button>
+    <button mat-button (click)="handleResponse(selectedMessage, 'decline')">
+      Decline
+    </button>
+  </div>
+</ng-template>

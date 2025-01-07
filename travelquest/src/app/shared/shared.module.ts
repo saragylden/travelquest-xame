@@ -3,7 +3,7 @@ import { NgModule } from '@angular/core';
 import { RouterModule } from '@angular/router';
 import { MaterialModule } from '../material/material.config';
 import { HashtagListComponent } from './components/hashtag-list/hashtag-list.component';
-import { MeetupVerificationService } from './components/meetup-verification/meetup-verification.component';
+import { MeetupVerificationService } from '../authorized/meetup/meetup-verification/meetup-verification.component';
 
 // const declarationList = [];
 const importList = [RouterModule, MaterialModule];
