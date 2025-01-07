@@ -1,6 +1,7 @@
 <div *ngIf="currentUserUID">
+  <!-- User Info -->
   <div class="user-info-box">
-    <span class="user-name">{{ otherUserName }}</span>
+    <span class="user-name">{{ otherUserName || "Unknown User" }}</span>
     <button
       mat-icon-button
       class="user-icon-button"
@@ -10,7 +11,9 @@
     </button>
   </div>
 
+  <!-- Conversation Section -->
   <div *ngIf="currentConversationId; else noConversation">
+    <!-- Loading Messages -->
     <div *ngIf="loadingMessages" class="loading-state">
       <p>Loading messages...</p>
     </div>
@@ -21,24 +24,14 @@
         *ngFor="let message of messages$ | async"
         class="message"
         [ngClass]="{
-          'sent-message': message.user === currentUserUID,
-          'received-message': message.user !== currentUserUID
+          'sent-message': message.userId === currentUserUID,
+          'received-message': message.userId !== currentUserUID
         }"
       >
         <div class="message-header">
-          <strong>{{ message.user }}:</strong>
+          <strong>{{ message.user }}</strong>
         </div>
-        <div class="message-content">
-          {{ message.text }}
-
-          <!-- Show "Accept" and "Decline" buttons for meetup verification message -->
-          <div *ngIf="message.text.includes('Did you meet')">
-            <button (click)="handleResponse(message, 'accept')">Accept</button>
-            <button (click)="handleResponse(message, 'decline')">
-              Decline
-            </button>
-          </div>
-        </div>
+        <div class="message-content">{{ message.text }}</div>
         <div class="message-footer">
           <span class="timestamp">{{
             message.timestamp.toDate() | date : "short"
@@ -54,7 +47,12 @@
         placeholder="Type a message..."
         rows="3"
       ></textarea>
-      <button (click)="sendMessage()" [disabled]="!newMessage.trim()">
+      <button
+        mat-raised-button
+        color="primary"
+        (click)="sendMessage()"
+        [disabled]="!newMessage.trim()"
+      >
         Send
       </button>
     </div>
@@ -73,7 +71,12 @@
         placeholder="Type a message..."
         rows="3"
       ></textarea>
-      <button (click)="sendMessage()" [disabled]="!newMessage.trim()">
+      <button
+        mat-raised-button
+        color="primary"
+        (click)="sendMessage()"
+        [disabled]="!newMessage.trim()"
+      >
         Send
       </button>
     </div>

@@ -17,7 +17,7 @@ import { map, switchMap } from 'rxjs/operators';
 import { sessionStoreRepository } from '../../shared/stores/session-store.repository';
 import { DocumentData } from 'firebase/firestore';
 import { Router } from '@angular/router';
-import { MeetupVerificationService } from '../../shared/components/meetup-verification/meetup-verification.component';
+import { MeetupVerificationService } from '../meetup-verification/meetup-verification.service';
 
 interface Message {
   text: string;
@@ -58,7 +58,7 @@ export class ChatComponent implements OnInit {
     });
   }
 
-  // Update this method to call the service method directly
+  // Call meetup verification service
   callMeetupVerification(): void {
     if (this.currentUserUID && this.otherUserId && this.currentConversationId) {
       this.meetupVerificationService.sendMeetupVerification(
@@ -242,13 +242,6 @@ export class ChatComponent implements OnInit {
     } else {
       this.sendMessageToFirestore(this.currentConversationId);
     }
-  }
-
-  handleResponse(message: Message, response: string): void {
-    // Process the response from the "Accept" or "Decline" button
-    console.log(
-      `Meetup verification response for message "${message.text}": ${response}`
-    );
   }
 
   private createNewConversation(): void {
