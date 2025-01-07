@@ -43,6 +43,8 @@ export class ChatComponent implements OnInit {
   otherUserName: string | null = null;
   loadingMessages: boolean = true;
   selectedMessage: any = null;
+  isRequesting: boolean = false; // Only sends 1 request
+  isRequestPending: boolean = false;
 
   // New property to hold verification requests
   verificationRequests: any[] = [];
@@ -124,7 +126,12 @@ export class ChatComponent implements OnInit {
 
   // Function to send the meetup verification request
   callMeetupVerification(): void {
+    if (this.isRequesting) {
+      return; // Prevent sending the request if it's already being sent
+    }
+
     if (this.currentUserUID && this.otherUserId && this.currentConversationId) {
+      this.isRequesting = true; // Disable the button
       this.meetupVerificationService.sendMeetupVerification(
         this.currentUserUID,
         this.otherUserId
@@ -132,6 +139,11 @@ export class ChatComponent implements OnInit {
     } else {
       console.error('Missing required information for meetup verification.');
     }
+  }
+
+  // Optional: Reset isRequesting if the request fails or succeeds
+  handleVerificationRequestResponse(response: string): void {
+    this.isRequesting = false; // Re-enable the button after the response
   }
 
   // Function to open meetup verification modal
@@ -321,8 +333,8 @@ export class ChatComponent implements OnInit {
     const message: Message = {
       text: this.newMessage.trim(),
       timestamp: Timestamp.fromDate(new Date()),
-      user: this.currentUserUID || 'Anonymous',
-      userId: this.currentUserUID!,
+      user: this.currentUserUID || '',
+      userId: this.currentUserUID || '',
     };
 
     addDoc(messagesCollection, message)

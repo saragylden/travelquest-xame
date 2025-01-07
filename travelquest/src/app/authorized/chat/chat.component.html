@@ -5,6 +5,7 @@
       mat-icon-button
       class="user-icon-button"
       (click)="callMeetupVerification()"
+      [disabled]="isRequesting || isRequestPending"
       *ngIf="currentConversationId && otherUserId && otherUserName"
     >
       <mat-icon>group_add</mat-icon>

@@ -23,19 +23,55 @@ export class MeetupVerificationService {
 
   // Method to send verification request
   sendMeetupVerification(currentUserUID: string, otherUserUID: string): void {
-    const verificationRequest = {
-      requestType: 'meetup-verification',
-      text: `Did you meet ${currentUserUID}?`, // Customize the message
-      timestamp: Timestamp.fromDate(new Date()),
-      senderUID: currentUserUID,
-      receiverUID: otherUserUID,
-      status: 'pending', // Pending verification
-    };
+    this.checkPendingRequest(currentUserUID, otherUserUID).then((isPending) => {
+      if (isPending) {
+        this.snackbarService.error(
+          'You already have a pending verification request with this user.'
+        );
+        return;
+      }
 
-    // Store the verification request in Firestore
-    this.sendVerificationRequest(verificationRequest);
+      const verificationRequest = {
+        requestType: 'meetup-verification',
+        text: `Did you meet ${currentUserUID}?`,
+        timestamp: Timestamp.fromDate(new Date()),
+        senderUID: currentUserUID,
+        receiverUID: otherUserUID,
+        status: 'pending', // Request is still pending
+      };
+
+      // Store the verification request in Firestore
+      this.sendVerificationRequest(verificationRequest);
+    });
   }
 
+  // Check if there is an existing pending request
+  private checkPendingRequest(
+    currentUserUID: string,
+    otherUserUID: string
+  ): Promise<boolean> {
+    const verificationRequestsCollection = collection(
+      this.firestore,
+      'meetup-verification-requests'
+    );
+
+    const pendingRequestQuery = query(
+      verificationRequestsCollection,
+      where('senderUID', '==', currentUserUID),
+      where('receiverUID', '==', otherUserUID),
+      where('status', '==', 'pending')
+    );
+
+    return new Promise((resolve) => {
+      collectionData(pendingRequestQuery, { idField: 'id' }).subscribe(
+        (requests) => {
+          resolve(requests.length > 0); // If there's any pending request, return true
+        }
+      );
+    });
+  }
+
+  // Store the verification request in Firestore
   private sendVerificationRequest(verificationRequest: any): void {
     const verificationRequestsCollection = collection(
       this.firestore,
