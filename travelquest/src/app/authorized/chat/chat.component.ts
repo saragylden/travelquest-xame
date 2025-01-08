@@ -91,7 +91,9 @@ export class ChatComponent implements OnInit {
     collectionData(requestsQuery, { idField: 'id' }).subscribe(
       (requests) => {
         console.log('Fetched verification requests:', requests);
-        this.verificationRequests = requests;
+        this.verificationRequests = requests.filter(
+          (x) => x['status'] === 'pending'
+        );
       },
       (error) => {
         console.error('Error fetching verification requests:', error);
@@ -102,10 +104,10 @@ export class ChatComponent implements OnInit {
   handleResponse(request: any, response: string): void {
     if (request.isProcessing) {
       console.log('Request is already being processed.');
-      return; // Prevent processing if already in progress
+      return;
     }
 
-    request.isProcessing = true; // Set processing flag
+    request.isProcessing = true;
 
     if (this.currentConversationId) {
       this.sessionStore
@@ -118,17 +120,17 @@ export class ChatComponent implements OnInit {
         )
         .then(() => {
           console.log('Meetup response handled successfully.');
-          request.isProcessing = false; // Reset processing flag
+          request.isProcessing = false;
         })
         .catch((error) => {
           console.error('Error handling meetup response:', error);
-          request.isProcessing = false; // Reset processing flag in case of error
+          request.isProcessing = false;
         });
     } else {
       console.error(
         'Current conversation ID is missing. Cannot handle request response.'
       );
-      request.isProcessing = false; // Reset processing flag
+      request.isProcessing = false;
     }
   }
 
