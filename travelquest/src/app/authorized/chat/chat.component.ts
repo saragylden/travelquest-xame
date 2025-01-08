@@ -65,44 +65,71 @@ export class ChatComponent implements OnInit {
 
   // Listen for incoming verification requests for the current user
   listenForVerificationRequests(): void {
-    if (this.currentUserUID) {
-      this.meetupVerificationService
-        .getVerificationRequests(this.currentUserUID)
-        .subscribe((requests) => {
-          this.verificationRequests = requests;
-        });
+    if (!this.currentUserUID) {
+      console.error('Missing currentUserUID.');
+      return;
     }
+
+    if (!this.currentConversationId) {
+      console.error('Missing currentConversationId.');
+      return;
+    }
+
+    console.log('Current User UID:', this.currentUserUID);
+    console.log('Current Conversation ID:', this.currentConversationId);
+
+    const requestsCollection = collection(
+      this.firestore,
+      `conversations/${this.currentConversationId}/meetup-verification-requests`
+    );
+
+    const requestsQuery = query(
+      requestsCollection,
+      where('receiverUID', '==', this.currentUserUID) // Correct field name
+    );
+
+    collectionData(requestsQuery, { idField: 'id' }).subscribe(
+      (requests) => {
+        console.log('Fetched verification requests:', requests);
+        this.verificationRequests = requests;
+      },
+      (error) => {
+        console.error('Error fetching verification requests:', error);
+      }
+    );
   }
 
-  // Handle response (accept/decline) for meetup verification request
   handleResponse(request: any, response: string): void {
     if (request.isProcessing) {
       console.log('Request is already being processed.');
       return; // Prevent processing if already in progress
     }
 
-    // Set processing flag to prevent further clicks
-    request.isProcessing = true;
+    request.isProcessing = true; // Set processing flag
 
-    console.log(`Meetup verification response for request: ${response}`);
-    // Update Firestore document with the response
-    const verificationRequestRef = doc(
-      this.firestore,
-      'meetup-verification-requests',
-      request.id
-    );
-
-    // Update the status of the request
-    updateDoc(verificationRequestRef, { status: response })
-      .then(() => {
-        console.log(`Verification request ${response} successfully.`);
-        // Optionally, reset processing flag after a brief delay if necessary
-      })
-      .catch((error) => {
-        console.error('Error updating verification request: ', error);
-        // Reset processing flag in case of error
-        request.isProcessing = false;
-      });
+    if (this.currentConversationId) {
+      this.sessionStore
+        .handleMeetupResponse(
+          this.currentConversationId,
+          request.id,
+          request.senderUID,
+          request.receiverUID,
+          response
+        )
+        .then(() => {
+          console.log('Meetup response handled successfully.');
+          request.isProcessing = false; // Reset processing flag
+        })
+        .catch((error) => {
+          console.error('Error handling meetup response:', error);
+          request.isProcessing = false; // Reset processing flag in case of error
+        });
+    } else {
+      console.error(
+        'Current conversation ID is missing. Cannot handle request response.'
+      );
+      request.isProcessing = false; // Reset processing flag
+    }
   }
 
   // Send message function

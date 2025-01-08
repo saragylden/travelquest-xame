@@ -474,23 +474,64 @@ export class sessionStoreRepository {
       'meetupStatus.lastRequestId': requestDocRef.id,
     });
 
-    // Optionally update the meetup count in the publicProfiles collection
-    const publicProfileRef = doc(this.firestore, `publicProfiles/${senderUID}`);
-    await runTransaction(this.firestore, async (transaction) => {
-      const publicProfileDoc = await transaction.get(publicProfileRef);
-      if (publicProfileDoc.exists()) {
-        const publicProfileData = publicProfileDoc.data() as PublicProfile; // Cast to the interface
-        const meetupCount = (publicProfileData.meetupCount || 0) + 1;
+    console.log('Meetup request sent successfully.');
+  }
 
-        transaction.update(publicProfileRef, {
-          meetupCount,
-        });
-      } else {
-        throw new Error('Public profile not found');
+  // Handle meetup request responses (accept/decline)
+  async handleMeetupResponse(
+    conversationId: string,
+    requestId: string,
+    senderUID: string,
+    receiverUID: string,
+    response: string
+  ): Promise<void> {
+    const verificationRequestRef = doc(
+      this.firestore,
+      `conversations/${conversationId}/meetup-verification-requests/${requestId}`
+    );
+
+    const senderProfileRef = doc(this.firestore, `publicProfiles/${senderUID}`);
+    const receiverProfileRef = doc(
+      this.firestore,
+      `publicProfiles/${receiverUID}`
+    );
+
+    await runTransaction(this.firestore, async (transaction) => {
+      // Read all required documents first
+      const senderProfileDoc = await transaction.get(senderProfileRef);
+      const receiverProfileDoc = await transaction.get(receiverProfileRef);
+
+      // Ensure documents exist before proceeding
+      if (!senderProfileDoc.exists()) {
+        throw new Error('Sender public profile not found.');
       }
+      if (!receiverProfileDoc.exists()) {
+        throw new Error('Receiver public profile not found.');
+      }
+
+      // Extract current data
+      const senderProfileData = senderProfileDoc.data() as PublicProfile;
+      const receiverProfileData = receiverProfileDoc.data() as PublicProfile;
+
+      // Prepare updates
+      const updatedSenderMeetupCount = (senderProfileData.meetupCount || 0) + 1;
+      const updatedReceiverMeetupCount =
+        (receiverProfileData.meetupCount || 0) + 1;
+
+      // Perform all writes after reads
+      if (response === 'accept') {
+        transaction.update(senderProfileRef, {
+          meetupCount: updatedSenderMeetupCount,
+        });
+        transaction.update(receiverProfileRef, {
+          meetupCount: updatedReceiverMeetupCount,
+        });
+      }
+
+      transaction.update(verificationRequestRef, { status: response });
     });
 
-    console.log('Meetup verification request sent successfully');
+    console.log('Meetup response handled and counts updated successfully.');
   }
 
   // Create a new instance of the session store

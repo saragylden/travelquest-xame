@@ -55,7 +55,8 @@
         class="verification-request"
       >
         <div class="verification-message">
-          <strong>{{ request.userName }}:</strong> {{ request.messageText }}
+          <strong>Sender:</strong> {{ request.senderUID || "Unknown Sender" }}
+          <p>{{ request.text || "No message provided" }}</p>
         </div>
         <div class="verification-actions">
           <button (click)="handleResponse(request, 'accept')">Accept</button>
