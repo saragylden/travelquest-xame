@@ -511,6 +511,30 @@ export class sessionStoreRepository {
       `publicProfiles/${receiverUID}`
     );
 
+    // Add check for existing accepted request between sender and receiver
+    const existingAcceptedRequestRef = collection(
+      this.firestore,
+      `conversations/${conversationId}/meetup-verification-requests`
+    );
+
+    // Query for an accepted request
+    const acceptedQuery = query(
+      existingAcceptedRequestRef,
+      where('status', '==', 'accept'),
+      where('senderUID', 'in', [senderUID, receiverUID]),
+      where('receiverUID', 'in', [senderUID, receiverUID])
+    );
+
+    const querySnapshot = await getDocs(acceptedQuery);
+
+    // If there is an existing accepted request, reject further requests
+    if (!querySnapshot.empty) {
+      throw new Error(
+        'An accepted request already exists between these users.'
+      );
+    }
+
+    // Continue with the transaction if no accepted request exists
     await runTransaction(this.firestore, async (transaction) => {
       // Read all required documents first
       const senderProfileDoc = await transaction.get(senderProfileRef);
