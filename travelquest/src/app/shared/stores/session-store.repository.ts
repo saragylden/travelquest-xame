@@ -439,6 +439,21 @@ export class sessionStoreRepository {
       `conversations/${conversationId}/meetup-verification-requests`
     );
 
+    // Check if the users have an accepted request
+    const acceptedRequestsQuery = query(
+      meetupRequestsRef,
+      where('senderUID', '==', senderUID),
+      where('receiverUID', '==', receiverUID),
+      where('status', '==', 'accept')
+    );
+    const acceptedRequests = await getDocs(acceptedRequestsQuery);
+
+    if (acceptedRequests.docs.length > 0) {
+      throw new Error(
+        'You cannot send a request as an accepted one already exists.'
+      );
+    }
+
     // Check if there's an existing pending request
     const pendingRequestsQuery = query(
       meetupRequestsRef,
