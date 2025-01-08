@@ -49,18 +49,26 @@
 
     <!-- Display Pending Meetup Verification Requests -->
     <div *ngIf="verificationRequests.length > 0" class="verification-requests">
-      <h3>Pending Meetup Verifications</h3>
       <div
         *ngFor="let request of verificationRequests"
         class="verification-request"
       >
         <div class="verification-message">
-          <strong>Sender:</strong> {{ request.senderUID || "Unknown Sender" }}
-          <p>{{ request.text || "No message provided" }}</p>
+          Have you met {{ request.senderUID || "Unknown Sender" }}
         </div>
         <div class="verification-actions">
-          <button (click)="handleResponse(request, 'accept')">Accept</button>
-          <button (click)="handleResponse(request, 'decline')">Decline</button>
+          <button
+            class="accept-button"
+            (click)="handleResponse(request, 'accept')"
+          >
+            Accept
+          </button>
+          <button
+            class="decline-button"
+            (click)="handleResponse(request, 'decline')"
+          >
+            Decline
+          </button>
         </div>
       </div>
     </div>
