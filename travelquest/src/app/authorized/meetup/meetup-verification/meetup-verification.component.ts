@@ -2,14 +2,17 @@ import { Injectable } from '@angular/core';
 import {
   Firestore,
   collection,
-  addDoc,
-  Timestamp,
   collectionData,
   query,
   where,
+  getDocs,
+  doc,
+  collectionGroup,
 } from '@angular/fire/firestore';
 import { SnackbarService } from '../../../shared/snackbar/snackbar.service';
 import { sessionStoreRepository } from '../../../shared/stores/session-store.repository';
+import { switchMap } from 'rxjs/operators';
+import { Observable, from } from 'rxjs';
 
 @Injectable({
   providedIn: 'root',
@@ -45,19 +48,41 @@ export class MeetupVerificationService {
       });
   }
 
-  getVerificationRequests(receiverUID: string) {
-    const verificationRequestsCollection = collection(
-      this.firestore,
-      'meetup-verification-requests'
+  getVerificationRequests(receiverUID: string): Observable<any[]> {
+    // Query all conversations where the receiverUID is a participant
+    const conversationsCollection = collection(this.firestore, 'conversations');
+    const conversationsQuery = query(
+      conversationsCollection,
+      where('participants', 'array-contains', receiverUID)
     );
 
-    return collectionData(
-      query(
-        verificationRequestsCollection,
-        where('receiverUID', '==', receiverUID),
-        where('status', '==', 'pending')
-      ),
-      { idField: 'id' }
+    // Fetch conversations and then fetch subcollection data for each conversation
+    return collectionData(conversationsQuery, { idField: 'id' }).pipe(
+      switchMap(async (conversations: any[]) => {
+        const allRequests: any[] = [];
+
+        // Fetch pending requests from each conversation's subcollection
+        for (const conversation of conversations) {
+          const conversationId = conversation.id;
+          const meetupRequestsRef = collection(
+            this.firestore,
+            `conversations/${conversationId}/meetup-verification-requests`
+          );
+          const requestsQuery = query(
+            meetupRequestsRef,
+            where('receiverUID', '==', receiverUID),
+            where('status', '==', 'pending')
+          );
+
+          const requestsSnapshot = await getDocs(requestsQuery);
+          requestsSnapshot.forEach((doc) => {
+            allRequests.push({ id: doc.id, ...doc.data() });
+          });
+        }
+
+        return allRequests;
+      }),
+      switchMap((promise) => from(promise)) // Flatten the Promise to an Observable
     );
   }
 }

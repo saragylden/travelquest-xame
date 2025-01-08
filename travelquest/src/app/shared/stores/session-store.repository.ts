@@ -16,6 +16,7 @@ import {
   getDoc,
   getDocs,
   setDoc,
+  updateDoc,
 } from '@angular/fire/firestore';
 import {
   Storage,
@@ -29,6 +30,19 @@ import { UserEditProfile } from '../models/user-profile.model';
 
 export interface SessionStoreProps {
   logoutTime: string | null;
+}
+
+interface PublicProfile {
+  meetupCount?: number;
+}
+
+interface Conversation {
+  participants: string[];
+  participantKey: string;
+  meetupStatus?: {
+    confirmed: boolean;
+    lastRequestId?: string | null;
+  };
 }
 
 @Injectable({ providedIn: 'root' })
@@ -390,70 +404,86 @@ export class sessionStoreRepository {
   }
 
   // Keep count on requests sent
-  // Keep count on requests sent
   async sendMeetupRequest(
     senderUID: string,
     receiverUID: string
   ): Promise<void> {
-    const meetupRequestsCollection = collection(
+    const conversationsRef = collection(this.firestore, 'conversations');
+
+    // Query for a conversation where the sender is a participant
+    const conversationQuery = query(
+      conversationsRef,
+      where('participants', 'array-contains', senderUID)
+    );
+    const conversationSnapshot = await getDocs(conversationQuery);
+
+    // Find a conversation with both participants
+    let conversationId: string | undefined;
+    for (const doc of conversationSnapshot.docs) {
+      const data = doc.data() as Conversation; // Cast to the Conversation interface
+      if (data.participants.includes(receiverUID)) {
+        conversationId = doc.id;
+        break;
+      }
+    }
+
+    if (!conversationId) {
+      throw new Error('No conversation exists between the users.');
+    }
+
+    console.log(`Conversation found: ${conversationId}`);
+
+    // Reference to the meetup-requests subcollection within this conversation
+    const meetupRequestsRef = collection(
       this.firestore,
-      'meetup-verification-requests'
+      `conversations/${conversationId}/meetup-verification-requests`
     );
 
-    // Check if there's an existing pending request from the sender to the receiver
+    // Check if there's an existing pending request
     const pendingRequestsQuery = query(
-      meetupRequestsCollection,
+      meetupRequestsRef,
       where('senderUID', '==', senderUID),
       where('receiverUID', '==', receiverUID),
       where('status', '==', 'pending')
     );
-
     const pendingRequests = await getDocs(pendingRequestsQuery);
 
     if (pendingRequests.docs.length > 0) {
       throw new Error('You already have a pending request with this user.');
     }
 
-    // Check how many requests the sender has already sent to this receiver
-    const sentRequestsQuery = query(
-      meetupRequestsCollection,
-      where('senderUID', '==', senderUID),
-      where('receiverUID', '==', receiverUID)
-    );
-
-    const sentRequests = await getDocs(sentRequestsQuery);
-    const requestCount = sentRequests.docs.length;
-
-    const requestLimit = 5; // Adjust this limit as needed
-    if (requestCount >= requestLimit) {
-      throw new Error('Request limit reached for this user.');
-    }
-
-    // If the limit is not reached, send the new request
+    // Create the new request object
     const newRequest = {
       requestType: 'meetup-verification',
       text: `Did you meet ${senderUID}?`,
       timestamp: Timestamp.fromDate(new Date()),
-      senderUID: senderUID,
-      receiverUID: receiverUID,
-      status: 'pending', // Request is still pending
+      senderUID,
+      receiverUID,
+      status: 'pending', // Request is pending
     };
 
-    // Add the request to the Firestore collection
-    await addDoc(meetupRequestsCollection, newRequest);
+    // Add the new request to the meetup-requests subcollection
+    const requestDocRef = await addDoc(meetupRequestsRef, newRequest);
 
-    // Now update the meetup count for the sender in their profile
+    // Optionally update the conversation with the last request ID
+    const conversationDocRef = doc(
+      this.firestore,
+      `conversations/${conversationId}`
+    );
+    await updateDoc(conversationDocRef, {
+      'meetupStatus.lastRequestId': requestDocRef.id,
+    });
+
+    // Optionally update the meetup count in the publicProfiles collection
     const publicProfileRef = doc(this.firestore, `publicProfiles/${senderUID}`);
-
     await runTransaction(this.firestore, async (transaction) => {
       const publicProfileDoc = await transaction.get(publicProfileRef);
       if (publicProfileDoc.exists()) {
-        let meetupCount = publicProfileDoc.data()?.['meetupCount'] || 0;
-        meetupCount++; // Increment the count by 1
+        const publicProfileData = publicProfileDoc.data() as PublicProfile; // Cast to the interface
+        const meetupCount = (publicProfileData.meetupCount || 0) + 1;
 
-        // Update the profile with the new count
         transaction.update(publicProfileRef, {
-          meetupCount: meetupCount,
+          meetupCount,
         });
       } else {
         throw new Error('Public profile not found');
@@ -463,6 +493,7 @@ export class sessionStoreRepository {
     console.log('Meetup verification request sent successfully');
   }
 
+  // Create a new instance of the session store
   private createStore(): typeof store {
     const store = createStore(
       { name: 'sessionStore' },
