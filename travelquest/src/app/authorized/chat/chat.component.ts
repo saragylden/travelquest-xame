@@ -7,6 +7,7 @@ import {
   collectionData,
   query,
   where,
+  getDocs,
   updateDoc,
   orderBy,
   Timestamp,
@@ -158,54 +159,68 @@ export class ChatComponent implements OnInit {
   // Function to send the meetup verification request
   callMeetupVerification(): void {
     if (this.isRequesting) {
-      return; // Prevent sending the request if it's already being sent
+      return; // Prevent multiple simultaneous requests
     }
 
     if (this.currentUserUID && this.otherUserId && this.currentConversationId) {
-      this.isRequesting = true; // Disable the button
+      this.isRequesting = true;
 
-      // Wrap the sendMeetupVerification call in a Promise
-      Promise.resolve(
-        this.meetupVerificationService.sendMeetupVerification(
-          this.currentUserUID,
-          this.otherUserId
-        )
-      )
+      const requestsCollectionPath = `conversations/${this.currentConversationId}/meetup-verification-requests`;
+      const requestsQuery = query(
+        collection(this.firestore, requestsCollectionPath),
+        where('senderUID', '==', this.currentUserUID),
+        where('receiverUID', '==', this.otherUserId),
+        where('status', 'in', ['pending', 'accept'])
+      );
+
+      getDocs(requestsQuery)
+        .then((snapshot) => {
+          if (!snapshot.empty) {
+            const existingRequest = snapshot.docs[0].data();
+            const status = existingRequest['status'];
+
+            if (status === 'accept') {
+              throw new Error(
+                'A request has already been accepted with this user.'
+              );
+            } else if (status === 'pending') {
+              throw new Error(
+                'You already have a pending verification request with this user.'
+              );
+            }
+          }
+
+          // If no conflicts, send the new request
+          return this.meetupVerificationService.sendMeetupVerification(
+            this.currentUserUID!,
+            this.otherUserId!
+          );
+        })
         .then(() => {
-          console.log('Meetup verification request sent successfully.');
           this.snackbarService.success(
             'Meetup verification request sent successfully.'
           );
         })
         .catch((error: Error) => {
           if (
-            error.message ===
-            'You cannot send a request as an accepted one already exists.'
+            error.message.includes('accepted') ||
+            error.message.includes('pending')
           ) {
-            this.snackbarService.error(
-              'A request has already been accepted with this user.'
-            );
-          } else if (error.message === 'You already have a pending request.') {
-            this.snackbarService.error(
-              'You already have a pending verification request with this user.'
-            );
-          } else if (error.message === 'Request limit reached for this user.') {
-            this.snackbarService.error(
-              'You have reached the maximum request limit for this user.'
-            );
+            this.snackbarService.error(error.message);
           } else {
-            console.error('Error handling meetup verification:', error);
+            console.error('Error sending meetup request:', error);
             this.snackbarService.error(
               'Error sending request. Please try again.'
             );
           }
         })
         .finally(() => {
-          this.isRequesting = false; // Re-enable the button
+          this.isRequesting = false; // Reset the state
         });
     } else {
       console.error('Missing required information for meetup verification.');
       this.snackbarService.error('Cannot send request. Missing information.');
+      this.isRequesting = false; // Ensure state reset
     }
   }
 

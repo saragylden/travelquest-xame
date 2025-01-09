@@ -27,6 +27,7 @@ import {
 import { Observable, from, map, of, switchMap } from 'rxjs';
 import { addDoc, query, runTransaction, where } from 'firebase/firestore';
 import { UserEditProfile } from '../models/user-profile.model';
+import { SnackbarService } from '../snackbar/snackbar.service';
 
 export interface SessionStoreProps {
   logoutTime: string | null;
@@ -52,7 +53,8 @@ export class sessionStoreRepository {
   constructor(
     private readonly firebaseAuth: Auth,
     private readonly firestore: Firestore,
-    private readonly storage: Storage
+    private readonly storage: Storage,
+    private snackbarService: SnackbarService
   ) {}
 
   // Register with email and password
@@ -449,9 +451,13 @@ export class sessionStoreRepository {
     const acceptedRequests = await getDocs(acceptedRequestsQuery);
 
     if (acceptedRequests.docs.length > 0) {
-      throw new Error(
+      console.log(
         'You cannot send a request as an accepted one already exists.'
       );
+      this.snackbarService.error(
+        'You cannot send a request as an accepted one already exists.'
+      );
+      return; // Exit the function
     }
 
     // Check if there's an existing pending request
