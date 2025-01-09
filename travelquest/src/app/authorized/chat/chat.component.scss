@@ -26,15 +26,22 @@ html {
   z-index: 10;
 }
 
+.user-icon {
+  background-color: $primary-text-color;
+  border-radius: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+
+  mat-icon {
+    color: white;
+  }
+}
+
 .user-name {
   font-size: 18px;
   font-weight: bold;
   color: #333;
-}
-
-.user-icon {
-  font-size: 24px;
-  color: #666;
 }
 
 /* Full Page Layout */
@@ -134,7 +141,7 @@ textarea {
   margin-right: 10px;
 }
 
-button {
+.sendButton {
   background-color: $primary-text-color;
   color: white;
   font-size: 0.9rem;
@@ -143,11 +150,11 @@ button {
   border-radius: 20px;
   cursor: pointer;
   transition: background-color 0.3s;
-}
 
-button:disabled {
-  background-color: #cccccc;
-  cursor: not-allowed;
+  button:disabled {
+    background-color: #cccccc;
+    cursor: not-allowed;
+  }
 }
 
 .no-conversation-message {

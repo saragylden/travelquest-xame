@@ -1,15 +1,16 @@
 <div *ngIf="currentUserUID">
   <div class="user-info-box">
     <span class="user-name">{{ otherUserName }}</span>
-    <button
-      mat-icon-button
-      class="user-icon-button"
-      (click)="callMeetupVerification()"
-      [disabled]="isRequesting || isRequestPending"
-      *ngIf="currentConversationId && otherUserId && otherUserName"
-    >
-      <mat-icon>group_add</mat-icon>
-    </button>
+    <div class="user-icon">
+      <button
+        mat-icon-button
+        (click)="callMeetupVerification()"
+        [disabled]="isRequesting || isRequestPending"
+        *ngIf="currentConversationId && otherUserId && otherUserName"
+      >
+        <mat-icon>group_add</mat-icon>
+      </button>
+    </div>
   </div>
 
   <div *ngIf="currentConversationId; else noConversation">
@@ -80,7 +81,11 @@
         placeholder="Type a message..."
         rows="3"
       ></textarea>
-      <button (click)="sendMessage()" [disabled]="!newMessage.trim()">
+      <button
+        class="sendButton"
+        (click)="sendMessage()"
+        [disabled]="!newMessage.trim()"
+      >
         Send
       </button>
     </div>
