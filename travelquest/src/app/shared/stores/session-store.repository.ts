@@ -480,7 +480,7 @@ export class sessionStoreRepository {
       timestamp: Timestamp.fromDate(new Date()),
       senderUID,
       receiverUID,
-      status: 'pending', // Request is pending
+      status: 'pending',
     };
 
     // Add the new request to the meetup-requests subcollection

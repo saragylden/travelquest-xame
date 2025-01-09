@@ -229,11 +229,11 @@ export class ChatComponent implements OnInit {
     this.isRequesting = false; // Re-enable the button after the response
   }
 
-  // Function to open meetup verification modal
-  openMeetupVerification(message: any) {
-    this.selectedMessage = message;
-    // Open modal to accept/decline (trigger modal in your UI)
-  }
+  // // Function to open meetup verification modal
+  // openMeetupVerification(message: any) {
+  //   this.selectedMessage = message;
+  //   // Open modal to accept/decline (trigger modal in your UI)
+  // }
 
   private async loadAuthenticatedUser(): Promise<void> {
     this.currentUserUID = await this.sessionStore

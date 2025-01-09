@@ -33,12 +33,6 @@
         </div>
         <div class="message-content">
           {{ message.text }}
-
-          <!-- Show "Accept" and "Decline" buttons for meetup verification message -->
-          <div *ngIf="message.text.includes('Did you meet')">
-            <button (click)="openMeetupVerification(message)">Accept</button>
-            <button (click)="openMeetupVerification(message)">Decline</button>
-          </div>
         </div>
         <div class="message-footer">
           <span class="timestamp">{{
