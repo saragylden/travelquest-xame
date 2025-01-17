@@ -16,7 +16,7 @@ import { from, map, Observable, switchMap } from 'rxjs';
 import { sessionStoreRepository } from '../../shared/stores/session-store.repository';
 import { addDoc, DocumentData } from 'firebase/firestore';
 import { ActivatedRoute, Router } from '@angular/router';
-import { MeetupVerificationService } from '../meetup/meetup-verification/meetup-verification.component';
+import { MeetupVerificationService } from '../meetup/meetup-verification/meetup-verification.service';
 import { SnackbarService } from '../../shared/snackbar/snackbar.service';
 
 interface Message {

@@ -1,6 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
-import { MeetupVerificationComponent } from './meetup-verification.component';
+import { MeetupVerificationComponent } from './meetup-verification.service';
 
 describe('MeetupVerificationComponent', () => {
   let component: MeetupVerificationComponent;
@@ -8,9 +8,8 @@ describe('MeetupVerificationComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [MeetupVerificationComponent]
-    })
-    .compileComponents();
+      imports: [MeetupVerificationComponent],
+    }).compileComponents();
 
     fixture = TestBed.createComponent(MeetupVerificationComponent);
     component = fixture.componentInstance;
